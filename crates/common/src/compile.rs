@@ -124,15 +124,20 @@ impl ProjectCompiler {
     /// Compiles the project.
     pub fn compile<C: Compiler>(mut self, project: &Project<C>) -> Result<ProjectCompileOutput<C>> {
         // TODO: Avoid process::exit
+       
         if !project.paths.has_input_files() && self.files.is_empty() {
+            println!("Compiling in Tri mode");
             println!("Nothing to compile");
             // nothing to do here
             std::process::exit(0);
         }
+       
+
 
         // Taking is fine since we don't need these in `compile_with`.
         let files = std::mem::take(&mut self.files);
-        self.compile_with(|| {
+        self.compile_with(|| { 
+
             let sources = if !files.is_empty() {
                 Source::read_all(files)?
             } else {
@@ -173,6 +178,7 @@ impl ProjectCompiler {
             tracing::debug!("finished compiling in {:.3}s", elapsed.as_secs_f64());
             r
         })?;
+        println!("Compiling in Tri mode");
 
         if bail && output.has_compiler_errors() {
             eyre::bail!("{output}")

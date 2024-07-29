@@ -49,6 +49,7 @@ fn main() -> Result<()> {
             if cmd.is_watch() {
                 utils::block_on(watch::watch_build(cmd))
             } else {
+                println!("Compiling in Tri mode");
                 cmd.run().map(drop)
             }
         }

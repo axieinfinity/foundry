@@ -20,6 +20,7 @@ use foundry_config::{
 use serde::Serialize;
 use std::path::PathBuf;
 
+
 foundry_config::merge_impl_figment_convert!(BuildArgs, args);
 
 /// CLI arguments for `forge build`.
@@ -50,6 +51,10 @@ pub struct BuildArgs {
     #[serde(skip)]
     pub paths: Option<Vec<PathBuf>>,
 
+
+    #[arg(long)]
+    pub excluded_folders: Vec<String>,
+
     /// Print compiled contract names.
     #[arg(long)]
     #[serde(skip)]
@@ -79,6 +84,7 @@ impl BuildArgs {
     pub fn run(self) -> Result<ProjectCompileOutput> {
         let mut config = self.try_load_config_emit_warnings()?;
 
+
         if install::install_missing_dependencies(&mut config, self.args.silent) &&
             config.auto_detect_remappings
         {
@@ -86,7 +92,8 @@ impl BuildArgs {
             config = self.load_config();
         }
 
-        let project = config.project()?;
+        let project: Project = config.project()?;
+        println!("Compiling in Tri mode");
 
         // Collect sources to compile if build subdirectories specified.
         let mut files = vec![];
@@ -94,18 +101,21 @@ impl BuildArgs {
             for path in paths {
                 let joined = project.root().join(path);
                 let path = if joined.exists() { &joined } else { path };
-                files.extend(source_files_iter(path, MultiCompilerLanguage::FILE_EXTENSIONS));
+                files.extend(
+                    source_files_iter(path, MultiCompilerLanguage::FILE_EXTENSIONS)
+                       
+                );
             }
         }
 
         let compiler = ProjectCompiler::new()
             .files(files)
             .print_names(self.names)
-            .print_sizes(self.sizes)
+            .print_sizes(true)
             .quiet(self.format_json)
             .bail(!self.format_json);
 
-        let output = compiler.compile(&project)?;
+        let output: ProjectCompileOutput = compiler.compile(&project)?;
 
         if self.format_json {
             println!("{}", serde_json::to_string_pretty(&output.output())?);
@@ -117,7 +127,7 @@ impl BuildArgs {
     /// Returns the `Project` for the current workspace
     ///
     /// This loads the `foundry_config::Config` for the current workspace (see
-    /// [`utils::find_project_root_path`] and merges the cli `BuildArgs` into it before returning
+    /// [`utils::find_project_root_path`] and merges the cli BuildArgs` into it before returning
     /// [`foundry_config::Config::project()`]
     pub fn project(&self) -> Result<Project> {
         self.args.project()
@@ -127,6 +137,14 @@ impl BuildArgs {
     pub fn is_watch(&self) -> bool {
         self.watch.watch.is_some()
     }
+
+    // Helper method to check if a file path should be excluded
+    pub fn is_excluded(&self, file_path: &std::path::Path) -> bool {
+        // Add your exclusion logic here
+        // For example, to exclude files in a "test" folder:
+        file_path.components().any(|c| c.as_os_str() == "test")
+    }
+
 
     /// Returns the [`watchexec::InitConfig`] and [`watchexec::RuntimeConfig`] necessary to
     /// bootstrap a new [`watchexe::Watchexec`] loop.

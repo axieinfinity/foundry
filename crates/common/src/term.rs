@@ -103,7 +103,7 @@ impl SpinnerReporter {
         std::thread::Builder::new()
             .name("spinner".into())
             .spawn(move || {
-                let mut spinner = Spinner::new("Compiling...");
+                let mut spinner = Spinner::new("Compiling...adasdasds");
                 loop {
                     spinner.tick();
                     match rx.try_recv() {

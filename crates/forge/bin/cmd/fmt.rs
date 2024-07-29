@@ -47,6 +47,7 @@ impl FmtArgs {
     pub fn run(self) -> Result<()> {
         let config = self.try_load_config_emit_warnings()?;
 
+
         // Expand ignore globs and canonicalize from the get go
         let ignored = expand_globs(&config.root.0, config.fmt.ignore.iter())?
             .iter()
@@ -147,7 +148,7 @@ impl FmtArgs {
                     cli_warn!(
                         "Nothing to format.\n\
                          HINT: If you are working outside of the project, \
-                         try providing paths to your source files: `forge fmt <paths>`"
+                         try providing paths to your source files: `forge fmt <paths>`adasdasd"
                     );
                     return Ok(())
                 }

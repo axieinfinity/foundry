@@ -40,7 +40,7 @@ use std::{
     cmp::min,
     collections::{BTreeMap, HashMap},
     time::Instant,
-};
+}; 
 
 /// When running tests, we deploy all external libraries present in the project. To avoid additional
 /// libraries affecting nonces of senders used in tests, we are using separate address to

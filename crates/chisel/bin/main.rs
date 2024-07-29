@@ -182,7 +182,9 @@ async fn main() -> eyre::Result<()> {
     }
 
     // Print welcome header
-    println!("Welcome to Chisel! Type `{}` to show available commands.", "!help".green());
+    println!("Welcome to Chisel! Type `{}` to show available commands.asdasds", "!help".red());
+    
+
 
     // Begin Rustyline loop
     loop {

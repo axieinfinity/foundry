@@ -706,7 +706,7 @@ impl Config {
         }
 
         self.libs = self.libs.into_iter().map(|lib| p(&root, &lib)).collect();
-
+        
         self.remappings =
             self.remappings.into_iter().map(|r| RelativeRemapping::new(r.into(), &root)).collect();
 
@@ -957,6 +957,7 @@ impl Config {
             .allowed_paths(&self.libs)
             .allowed_paths(&self.allow_paths)
             .include_paths(&self.include_paths);
+            
 
         if let Some(build_info_path) = &self.build_info_path {
             builder = builder.build_infos(build_info_path);
