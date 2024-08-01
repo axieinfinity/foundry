@@ -1,0 +1,21 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+exclude.workspace = true
+
+[dependencies]
+actix-web = "4"
+
+anvil = { path = "../crates/anvil" }
+cast = { path = "../crates/cast" }
+chisel = { path = "../crates/chisel" }
+forge = { path = "../crates/forge" }
+
+[lints]
+workspace = true

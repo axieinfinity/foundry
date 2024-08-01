@@ -252,6 +252,10 @@ where
     new_evm_with_inspector(WrapDatabaseRef(db), env, inspector)
 }
 
+pub fn hello_world_from_cast() -> String {
+    "Hello World From Cast".to_string()
+}
+
 pub fn new_evm_with_existing_context<'a, DB, I>(
     inner: revm::InnerEvmContext<DB>,
     inspector: I,

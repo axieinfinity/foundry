@@ -21,7 +21,8 @@ members = [
     "crates/fmt/",
     "crates/forge/",
     "crates/macros/",
-    "crates/test-utils/",
+    "crates/test-utils/", "server",
+    "server",
 ]
 resolver = "2"
 
@@ -132,6 +133,9 @@ anvil = { path = "crates/anvil" }
 cast = { path = "crates/cast" }
 chisel = { path = "crates/chisel" }
 forge = { path = "crates/forge" }
+actix-web = "4"
+
+
 
 forge-doc = { path = "crates/doc" }
 forge-fmt = { path = "crates/fmt" }
