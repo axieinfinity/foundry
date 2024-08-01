@@ -846,9 +846,9 @@ impl Config {
             .filter_map(|path| GlobMatcher::from_str(path).ok())
             .collect();
 
-        let filter: SkipBuildFilters =
+        let ignore_filter: SkipBuildFilters =
             SkipBuildFilters::new(ignore_pattern.clone(), self.root.0.clone());
-        builder = builder.sparse_output(filter);
+        builder = builder.sparse_output(ignore_filter);
 
         if !self.skip.is_empty() {
             let filter = SkipBuildFilters::new(self.skip.clone(), self.root.0.clone());
@@ -1081,10 +1081,11 @@ impl Config {
 
     pub fn get_ignore_paths(&self) -> Result<Vec<String>, SolcError> {
         let path = Path::new("foundry.ignore");
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
         let file = File::open(&path).unwrap();
-
         let reader = io::BufReader::new(file);
-
         let mut entries: Vec<String> = Vec::new();
         for line in reader.lines() {
             let line = line.map_err(|e| SolcError::msg(format!("Failed to read line: {}", e)))?;
