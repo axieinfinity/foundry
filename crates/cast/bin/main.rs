@@ -41,6 +41,8 @@ async fn main() -> Result<()> {
     utils::enable_paint();
 
     let opts = Opts::parse();
+    let version: String = "0.0.1".to_string();
+    println!("Cutomize from foundry version: {}", version);
     match opts.cmd {
         // Constants
         CastSubcommand::MaxInt { r#type } => {

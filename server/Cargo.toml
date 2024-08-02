@@ -11,11 +11,16 @@ exclude.workspace = true
 
 [dependencies]
 actix-web = "4"
+actix-cors = "0.6.0"
 
 anvil = { path = "../crates/anvil" }
 cast = { path = "../crates/cast" }
 chisel = { path = "../crates/chisel" }
 forge = { path = "../crates/forge" }
+
+
+
+
 
 [lints]
 workspace = true
