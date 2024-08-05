@@ -1,7 +1,7 @@
 use alloy_json_abi::JsonAbi;
 use alloy_primitives::Address;
 use eyre::{Result, WrapErr};
-use foundry_common::{cli_warn, fs, TestFunctionExt};
+use foundry_common::{cli_warn, fs, shell::println, TestFunctionExt};
 use foundry_compilers::{
     artifacts::{CompactBytecode, CompactDeployedBytecode, Settings},
     cache::{CacheEntry, CompilerCache},
@@ -20,12 +20,12 @@ use foundry_evm::{
         render_trace_arena, CallTraceDecoder, CallTraceDecoderBuilder, TraceKind, Traces,
     },
 };
+use serde_json::Value;
 use std::{
-    fmt::Write,
-    path::{Path, PathBuf},
-    str::FromStr,
+    collections::{HashMap, HashSet}, fmt::Write, ops::Add, path::{Path, PathBuf}, str::FromStr
 };
 use yansi::Paint;
+
 
 /// Given a `Project`'s output, removes the matching ABI, Bytecode and
 /// Runtime Bytecode of the given contract.
@@ -364,8 +364,9 @@ pub async fn handle_traces(
         }
         None
     });
+
     let config_labels = config.labels.clone().into_iter();
-    let mut decoder = CallTraceDecoderBuilder::new()
+    let mut decoder: CallTraceDecoder = CallTraceDecoderBuilder::new()
         .with_labels(labels.chain(config_labels))
         .with_signature_identifier(SignaturesIdentifier::new(
             Config::foundry_cache_dir(),
@@ -373,12 +374,25 @@ pub async fn handle_traces(
         )?)
         .build();
 
+    let mut addresses: HashSet<Address> = HashSet::new();
+     // get all addresses that include in the tx
+     for (_, trace) in result.traces.as_deref_mut().unwrap_or_default() {
+        for (address, _) in decoder.trace_addresses(trace) {
+            addresses.insert(*address);
+        }
+    }
+    // lable ronin addresses
+    let ronin_labels = get_ronin_labels(addresses).await?;
+    decoder.labels.extend(ronin_labels);
+
+    
     let mut etherscan_identifier = EtherscanIdentifier::new(config, chain)?;
     if let Some(etherscan_identifier) = &mut etherscan_identifier {
         for (_, trace) in result.traces.as_deref_mut().unwrap_or_default() {
             decoder.identify(trace, etherscan_identifier);
         }
     }
+   
 
     if decode_internal {
         let sources = if let Some(etherscan_identifier) = &etherscan_identifier {
@@ -427,3 +441,25 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     println!("Gas used: {}", result.gas_used);
     Ok(())
 }
+
+pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Address, String>> {
+    let client = reqwest::Client::new();
+    let url = "https://explorer-kintsugi.roninchain.com/v2/2020/address";
+
+    let response = client.get(url).send().await?.json::<Value>().await?;
+    let mut result: HashMap<Address, String> = HashMap::new();
+
+
+    if let Some(items) = response["result"]["items"].as_object() {
+        for (address_str, item) in items {
+            if let (address, Some(name)) = (address_str.parse::<Address>().unwrap(), item["name"].as_str()) {
+                if addresses.contains(&address) {
+                    result.insert(address, name.to_string());
+                }
+            }
+        }
+    }
+
+    Ok(result)
+}
+
