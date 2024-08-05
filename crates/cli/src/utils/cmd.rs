@@ -454,7 +454,7 @@ pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Add
         for (address_str, item) in items {
             if let (address, Some(name)) = (address_str.parse::<Address>().unwrap(), item["name"].as_str()) {
                 if addresses.contains(&address) {
-                    result.insert(address, format!("<span>{}</span>", name));
+                    result.insert(address, format!("<span>{}", name));
                 }
             }
         }

@@ -361,9 +361,10 @@ impl CallTraceDecoder {
                 Some(fs) => fs,
                 None => {
                     if let Some(identifier) = &self.signature_identifier {
-                        if let Some(function) =
+                        if let Some(mut function) =
                             identifier.write().await.identify_function(selector).await
                         {
+                            function.name = function.name + "</span>";
                             functions.push(function);
                         }
                     }
