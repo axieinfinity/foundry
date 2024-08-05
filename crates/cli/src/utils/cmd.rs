@@ -360,7 +360,7 @@ pub async fn handle_traces(
         if let Some(addr) = iter.next() {
             if let (Ok(address), Some(label)) = (Address::from_str(addr), iter.next()) {
                 return Some((address, label.to_string()));
-            }
+            } 
         }
         None
     });
@@ -381,6 +381,8 @@ pub async fn handle_traces(
             addresses.insert(*address);
         }
     }
+
+
     // lable ronin addresses
     let ronin_labels = get_ronin_labels(addresses).await?;
     decoder.labels.extend(ronin_labels);
@@ -393,7 +395,6 @@ pub async fn handle_traces(
         }
     }
    
-
     if decode_internal {
         let sources = if let Some(etherscan_identifier) = &etherscan_identifier {
             etherscan_identifier.get_compiled_contracts().await?
@@ -402,6 +403,7 @@ pub async fn handle_traces(
         };
         decoder.debug_identifier = Some(DebugTraceIdentifier::new(sources));
     }
+
 
     if debug {
         let sources = if let Some(etherscan_identifier) = etherscan_identifier {
@@ -433,9 +435,9 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     println!();
 
     if result.success {
-        println!("{}", "Transaction successfully executed.".green());
+        println!("{}", "<b class='tx-success'>Transaction successfully executed.</b>".green());
     } else {
-        println!("{}", "Transaction failed.".red());
+        println!("{}", "<b class='tx-failed'>Transaction failed.</b>".red());
     }
 
     println!("Gas used: {}", result.gas_used);
@@ -448,7 +450,6 @@ pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Add
 
     let response = client.get(url).send().await?.json::<Value>().await?;
     let mut result: HashMap<Address, String> = HashMap::new();
-
 
     if let Some(items) = response["result"]["items"].as_object() {
         for (address_str, item) in items {
