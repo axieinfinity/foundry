@@ -364,7 +364,7 @@ impl CallTraceDecoder {
                         if let Some(mut function) =
                             identifier.write().await.identify_function(selector).await
                         {
-                            function.name = function.name + "</span>";
+                            function.name = format!("<span>{}</span>", function.name);
                             functions.push(function);
                         }
                     }
