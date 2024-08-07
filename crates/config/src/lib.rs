@@ -931,9 +931,9 @@ impl Config {
 
     /// Whether caching should be enabled for the given chain id
     pub fn enable_caching(&self, endpoint: &str, chain_id: impl Into<u64>) -> bool {
-        !self.no_storage_caching
-            && self.rpc_storage_caching.enable_for_chain_id(chain_id.into())
-            && self.rpc_storage_caching.enable_for_endpoint(endpoint)
+        !self.no_storage_caching &&
+            self.rpc_storage_caching.enable_for_chain_id(chain_id.into()) &&
+            self.rpc_storage_caching.enable_for_endpoint(endpoint)
     }
 
     /// Returns the `ProjectPathsConfig` sub set of the config.
@@ -1071,12 +1071,11 @@ impl Config {
     pub fn get_ignore_filter(&self) -> Result<SkipBuildFilters, SolcError> {
         let ignored_paths: Vec<String> = self.get_ignored_paths()?;
 
-        let ignore_pattern: Vec<GlobMatcher> = ignored_paths
-            .iter()
-            .filter_map(|path| GlobMatcher::from_str(path).ok())
-            .collect();
+        let ignore_pattern: Vec<GlobMatcher> =
+            ignored_paths.iter().filter_map(|path| GlobMatcher::from_str(path).ok()).collect();
 
-        let ignore_filter: SkipBuildFilters = SkipBuildFilters::new(ignore_pattern.clone(), self.root.0.clone());
+        let ignore_filter: SkipBuildFilters =
+            SkipBuildFilters::new(ignore_pattern, self.root.0.clone());
         Ok(ignore_filter)
     }
 
@@ -1085,15 +1084,15 @@ impl Config {
 
         if !foundryignore_file_path.exists() {
             eprintln!("{}{}", "Warning: ".yellow().bold(), "Can not find .foundryignore".bold());
-            return Ok(Vec::new());
+            return Ok(Vec::new())
         }
 
-        let file = File::open(&foundryignore_file_path).unwrap();
+        let file = File::open(foundryignore_file_path).unwrap();
         let reader = io::BufReader::new(file);
         let mut ignored_paths: Vec<String> = Vec::new();
 
         for line in reader.lines() {
-            let line = line.map_err(|e| SolcError::msg(format!("Failed to read line: {}", e)))?;
+            let line = line.map_err(|e| SolcError::msg(format!("Failed to read line: {e}")))?;
             let trimmed = line.trim();
             if !trimmed.is_empty() && !trimmed.starts_with('#') {
                 ignored_paths.push(trimmed.to_string());
@@ -1101,7 +1100,11 @@ impl Config {
         }
 
         if ignored_paths.is_empty() {
-            eprintln!("{}{}", "Warning: ".yellow().bold(), "No skipped paths found in .foundryignore".bold());
+            eprintln!(
+                "{}{}",
+                "Warning: ".yellow().bold(),
+                "No skipped paths found in .foundryignore".bold()
+            );
         }
 
         Ok(ignored_paths)
@@ -1809,8 +1812,8 @@ impl Config {
             let file_name = block.file_name();
             let filepath = if file_type.is_dir() {
                 block.path().join("storage.json")
-            } else if file_type.is_file()
-                && file_name.to_string_lossy().chars().all(char::is_numeric)
+            } else if file_type.is_file() &&
+                file_name.to_string_lossy().chars().all(char::is_numeric)
             {
                 block.path()
             } else {
@@ -1873,11 +1876,14 @@ impl Config {
             if let Some((_, fallback)) =
                 STANDALONE_FALLBACK_SECTIONS.iter().find(|(key, _)| standalone_key == key)
             {
-                figment = figment.merge(
-                    ProviderExt::wrap(&provider.fallback(standalone_key, fallback), profile.clone(), standalone_key)                        
-                );
+                figment = figment.merge(ProviderExt::wrap(
+                    &provider.fallback(standalone_key, fallback),
+                    profile.clone(),
+                    standalone_key,
+                ));
             } else {
-                figment = figment.merge(ProviderExt::wrap(&provider, profile.clone(), standalone_key));
+                figment =
+                    figment.merge(ProviderExt::wrap(&provider, profile.clone(), standalone_key));
             }
         }
         // merge the profile
