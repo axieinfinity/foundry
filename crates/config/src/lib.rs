@@ -16,7 +16,7 @@ use figment::{
     value::{Dict, Map, Value},
     Error, Figment, Metadata, Profile, Provider,
 };
-use filter::{GlobMatcher, SkipBuildFilter};
+use filter::GlobMatcher;
 use foundry_compilers::{
     artifacts::{
         output_selection::{ContractOutputSelection, OutputSelection},
@@ -49,6 +49,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+use yansi::Paint;
 
 mod macros;
 
@@ -835,19 +836,7 @@ impl Config {
             .set_build_info(!no_artifacts && self.build_info)
             .set_no_artifacts(no_artifacts);
 
-        let foundry_ignored_paths: Vec<String> = self.get_ignore_paths()?;
-
-        if foundry_ignored_paths.is_empty() {
-            println!("No ignored paths found");
-        }
-
-        let ignore_pattern: Vec<GlobMatcher> = foundry_ignored_paths
-            .iter()
-            .filter_map(|path| GlobMatcher::from_str(path).ok())
-            .collect();
-
-        let ignore_filter: SkipBuildFilters =
-            SkipBuildFilters::new(ignore_pattern.clone(), self.root.0.clone());
+        let ignore_filter: SkipBuildFilters = self.get_ignore_filter()?;
         builder = builder.sparse_output(ignore_filter);
 
         if !self.skip.is_empty() {
@@ -1079,23 +1068,43 @@ impl Config {
         }
     }
 
-    pub fn get_ignore_paths(&self) -> Result<Vec<String>, SolcError> {
-        let path = Path::new("foundry.ignore");
-        if !path.exists() {
+    pub fn get_ignore_filter(&self) -> Result<SkipBuildFilters, SolcError> {
+        let ignored_paths: Vec<String> = self.get_ignored_paths()?;
+
+        let ignore_pattern: Vec<GlobMatcher> = ignored_paths
+            .iter()
+            .filter_map(|path| GlobMatcher::from_str(path).ok())
+            .collect();
+
+        let ignore_filter: SkipBuildFilters = SkipBuildFilters::new(ignore_pattern.clone(), self.root.0.clone());
+        Ok(ignore_filter)
+    }
+
+    pub fn get_ignored_paths(&self) -> Result<Vec<String>, SolcError> {
+        let foundryignore_file_path = Path::new(".foundryignore");
+
+        if !foundryignore_file_path.exists() {
+            eprintln!("{}{}", "Warning: ".yellow().bold(), "Can not find .foundryignore".bold());
             return Ok(Vec::new());
         }
-        let file = File::open(&path).unwrap();
+
+        let file = File::open(&foundryignore_file_path).unwrap();
         let reader = io::BufReader::new(file);
-        let mut entries: Vec<String> = Vec::new();
+        let mut ignored_paths: Vec<String> = Vec::new();
+
         for line in reader.lines() {
             let line = line.map_err(|e| SolcError::msg(format!("Failed to read line: {}", e)))?;
             let trimmed = line.trim();
             if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                entries.push(trimmed.to_string());
+                ignored_paths.push(trimmed.to_string());
             }
         }
 
-        Ok(entries)
+        if ignored_paths.is_empty() {
+            eprintln!("{}{}", "Warning: ".yellow().bold(), "No skipped paths found in .foundryignore".bold());
+        }
+
+        Ok(ignored_paths)
     }
 
     /// Resolves the given alias to a matching rpc url
@@ -1865,12 +1874,10 @@ impl Config {
                 STANDALONE_FALLBACK_SECTIONS.iter().find(|(key, _)| standalone_key == key)
             {
                 figment = figment.merge(
-                    provider
-                        .fallback(standalone_key, fallback)
-                        .wrap(profile.clone(), standalone_key),
+                    ProviderExt::wrap(&provider.fallback(standalone_key, fallback), profile.clone(), standalone_key)                        
                 );
             } else {
-                figment = figment.merge(provider.wrap(profile.clone(), standalone_key));
+                figment = figment.merge(ProviderExt::wrap(&provider, profile.clone(), standalone_key));
             }
         }
         // merge the profile
