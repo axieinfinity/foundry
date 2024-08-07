@@ -1,7 +1,7 @@
 use alloy_json_abi::JsonAbi;
 use alloy_primitives::Address;
 use eyre::{Result, WrapErr};
-use foundry_common::{cli_warn, fs, shell::println, TestFunctionExt};
+use foundry_common::{cli_warn, fs, TestFunctionExt};
 use foundry_compilers::{
     artifacts::{CompactBytecode, CompactDeployedBytecode, Settings},
     cache::{CacheEntry, CompilerCache},
@@ -22,7 +22,7 @@ use foundry_evm::{
 };
 use serde_json::Value;
 use std::{
-    collections::{HashMap, HashSet}, fmt::Write, ops::Add, path::{Path, PathBuf}, str::FromStr
+    collections::{HashMap, HashSet}, fmt::Write, path::{Path, PathBuf}, str::FromStr
 };
 use yansi::Paint;
 

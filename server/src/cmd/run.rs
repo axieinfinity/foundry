@@ -190,8 +190,7 @@ impl RunArgs {
 
                     configure_tx_env(&mut env, &tx);
 
-                    if let Some(to) = tx.to {
-                        // trace!(tx=?tx.hash,?to, "executing previous call transaction");
+                    if let Some(_to) = tx.to {
                         executor.transact_with_env(env.clone()).wrap_err_with(|| {
                             format!(
                                 "Failed to execute transaction: {:?} in block {}",
@@ -199,7 +198,6 @@ impl RunArgs {
                             )
                         })?;
                     } else {
-                        // trace!(tx=?tx.hash, "executing previous create transaction");
                         if let Err(error) = executor.deploy_with_env(env.clone(), None) {
                             match error {
                                 // Reverted transactions should be skipped
@@ -227,11 +225,9 @@ impl RunArgs {
 
             configure_tx_env(&mut env, &tx);
 
-            if let Some(to) = tx.to {
-                // trace!(tx=?tx.hash, to=?to, "executing call transaction");
+            if let Some(_to) = tx.to {
                 TraceResult::from_raw(executor.transact_with_env(env)?, TraceKind::Execution)
             } else {
-                // trace!(tx=?tx.hash, "executing create transaction");
                 TraceResult::try_from(executor.deploy_with_env(env, None))?
             }
         };
