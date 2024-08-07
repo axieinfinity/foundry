@@ -5,7 +5,7 @@ FROM alpine:3.18 as build-environment
 ARG TARGETARCH
 WORKDIR /opt
 
-RUN apk add clang lld curl build-base linux-headers git \
+RUN apk add clang lld curl build-base linux-headers git libressl-dev \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup.sh \
     && chmod +x ./rustup.sh \
     && ./rustup.sh -y
