@@ -1,7 +1,7 @@
 use alloy_json_abi::JsonAbi;
 use alloy_primitives::Address;
 use eyre::{Result, WrapErr};
-use foundry_common::{cli_warn, fs, shell::println, TestFunctionExt};
+use foundry_common::{cli_warn, fs, TestFunctionExt};
 use foundry_compilers::{
     artifacts::{CompactBytecode, CompactDeployedBytecode, Settings},
     cache::{CacheEntry, CompilerCache},
@@ -22,7 +22,7 @@ use foundry_evm::{
 };
 use serde_json::Value;
 use std::{
-    collections::{HashMap, HashSet}, fmt::Write, ops::Add, path::{Path, PathBuf}, str::FromStr
+    collections::{HashMap, HashSet}, fmt::Write, path::{Path, PathBuf}, str::FromStr
 };
 use yansi::Paint;
 
@@ -353,14 +353,14 @@ pub async fn handle_traces(
     labels: Vec<String>,
     debug: bool,
     decode_internal: bool,
-) -> Result<()> {
+) -> Result<String> {
     let labels = labels.iter().filter_map(|label_str| {
         let mut iter = label_str.split(':');
 
         if let Some(addr) = iter.next() {
             if let (Ok(address), Some(label)) = (Address::from_str(addr), iter.next()) {
                 return Some((address, label.to_string()));
-            } 
+            }
         }
         None
     });
@@ -381,8 +381,6 @@ pub async fn handle_traces(
             addresses.insert(*address);
         }
     }
-
-
     // lable ronin addresses
     let ronin_labels = get_ronin_labels(addresses).await?;
     decoder.labels.extend(ronin_labels);
@@ -395,6 +393,7 @@ pub async fn handle_traces(
         }
     }
    
+
     if decode_internal {
         let sources = if let Some(etherscan_identifier) = &etherscan_identifier {
             etherscan_identifier.get_compiled_contracts().await?
@@ -403,8 +402,7 @@ pub async fn handle_traces(
         };
         decoder.debug_identifier = Some(DebugTraceIdentifier::new(sources));
     }
-
-
+    let mut trace_str = String::new();
     if debug {
         let sources = if let Some(etherscan_identifier) = etherscan_identifier {
             etherscan_identifier.get_compiled_contracts().await?
@@ -418,30 +416,31 @@ pub async fn handle_traces(
             .build();
         debugger.try_run()?;
     } else {
-        print_traces(&mut result, &decoder).await?;
+        trace_str = print_traces(&mut result, &decoder).await?;
     }
 
-    Ok(())
+    Ok(trace_str)
 }
 
-pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) -> Result<()> {
+pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) -> Result<String> {
     let traces = result.traces.as_mut().expect("No traces found");
-
+    let mut trace_str = String::new();
     println!("Traces:");
     for (_, arena) in traces {
         decode_trace_arena(arena, decoder).await?;
-        println!("{}", render_trace_arena(arena));
+        trace_str = render_trace_arena(arena);
+        println!("{}", trace_str);
     }
     println!();
 
     if result.success {
-        println!("{}", "<b class='tx-success'>Transaction successfully executed.</b>".green());
+        println!("{}", "Transaction successfully executed.".green());
     } else {
-        println!("{}", "<b class='tx-failed'>Transaction failed.</b>".red());
+        println!("{}", "Transaction failed.".red());
     }
 
     println!("Gas used: {}", result.gas_used);
-    Ok(())
+    Ok(trace_str)
 }
 
 pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Address, String>> {
@@ -450,6 +449,7 @@ pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Add
 
     let response = client.get(url).send().await?.json::<Value>().await?;
     let mut result: HashMap<Address, String> = HashMap::new();
+
 
     if let Some(items) = response["result"]["items"].as_object() {
         for (address_str, item) in items {
