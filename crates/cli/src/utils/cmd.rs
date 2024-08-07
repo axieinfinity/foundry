@@ -353,7 +353,7 @@ pub async fn handle_traces(
     labels: Vec<String>,
     debug: bool,
     decode_internal: bool,
-) -> Result<()> {
+) -> Result<String> {
     let labels = labels.iter().filter_map(|label_str| {
         let mut iter = label_str.split(':');
 
@@ -402,7 +402,7 @@ pub async fn handle_traces(
         };
         decoder.debug_identifier = Some(DebugTraceIdentifier::new(sources));
     }
-
+    let mut trace_str = String::new();
     if debug {
         let sources = if let Some(etherscan_identifier) = etherscan_identifier {
             etherscan_identifier.get_compiled_contracts().await?
@@ -416,19 +416,20 @@ pub async fn handle_traces(
             .build();
         debugger.try_run()?;
     } else {
-        print_traces(&mut result, &decoder).await?;
+        trace_str = print_traces(&mut result, &decoder).await?;
     }
 
-    Ok(())
+    Ok(trace_str)
 }
 
-pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) -> Result<()> {
+pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) -> Result<String> {
     let traces = result.traces.as_mut().expect("No traces found");
-
+    let mut trace_str = String::new();
     println!("Traces:");
     for (_, arena) in traces {
         decode_trace_arena(arena, decoder).await?;
-        println!("{}", render_trace_arena(arena));
+        trace_str = render_trace_arena(arena);
+        println!("{}", trace_str);
     }
     println!();
 
@@ -439,7 +440,7 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     }
 
     println!("Gas used: {}", result.gas_used);
-    Ok(())
+    Ok(trace_str)
 }
 
 pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Address, String>> {

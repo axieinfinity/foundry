@@ -21,7 +21,7 @@ members = [
     "crates/fmt/",
     "crates/forge/",
     "crates/macros/",
-    "crates/test-utils/", "server",
+    "crates/test-utils/", 
     "server",
 ]
 resolver = "2"
