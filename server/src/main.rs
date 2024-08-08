@@ -46,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         App::new().wrap(cors).service(cast_command_handler)
     })
     .keep_alive(Duration::from_secs(600))
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .workers(5)
     .run()
     .await
