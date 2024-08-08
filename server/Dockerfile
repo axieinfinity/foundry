@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:experimental
-# Build stage - Rust Container
+
 FROM rust:1.80 as build
 
 RUN apt-get update && apt-get install -y cmake
