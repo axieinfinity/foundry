@@ -5,7 +5,7 @@ on:
       branches:
         - feature/*
       paths:
-        - server/*
+        - server/**
     # Trigger without any parameters a proactive rebuild
     workflow_dispatch: {}
     workflow_call:

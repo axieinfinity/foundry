@@ -7,7 +7,8 @@ on:
       branches:
         - feature/*
       paths-ignore:
-        - server/*
+        - server/**
+        - .github/**
     # Trigger without any parameters a proactive rebuild
     workflow_dispatch: {}
     workflow_call:
