@@ -30,6 +30,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry --mount=type=cache,target=/r
     && strip out/chisel \
     && strip out/anvil;
 
+
 LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.name="Foundry" \
       org.label-schema.description="Foundry" \
