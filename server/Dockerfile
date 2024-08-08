@@ -3,7 +3,6 @@
 FROM rust:1.80 as build
 
 RUN apt-get update && apt-get install -y cmake
-# RUN --mount=type=secret,id=github_token git config --global url."https://x-access-token:$(cat /run/secrets/github_token)@github.com".insteadOf "ssh://git@github.com"
 WORKDIR /app
 
 COPY . .
