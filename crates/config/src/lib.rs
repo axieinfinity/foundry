@@ -44,10 +44,12 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::{
     borrow::Cow,
     collections::HashMap,
-    fs,
+    fs::{self, File},
+    io::{self, BufRead},
     path::{Path, PathBuf},
     str::FromStr,
 };
+use yansi::Paint;
 
 mod macros;
 
@@ -834,6 +836,9 @@ impl Config {
             .set_build_info(!no_artifacts && self.build_info)
             .set_no_artifacts(no_artifacts);
 
+        let ignore_filter: SkipBuildFilters = self.get_ignore_filter()?;
+        builder = builder.sparse_output(ignore_filter);
+
         if !self.skip.is_empty() {
             let filter = SkipBuildFilters::new(self.skip.clone(), self.root.0.clone());
             builder = builder.sparse_output(filter);
@@ -886,7 +891,7 @@ impl Config {
                         if self.offline {
                             return Err(SolcError::msg(format!(
                                 "can't install missing solc {version} in offline mode"
-                            )))
+                            )));
                         }
                         Solc::blocking_install(version)?
                     }
@@ -896,12 +901,12 @@ impl Config {
                         return Err(SolcError::msg(format!(
                             "`solc` {} does not exist",
                             solc.display()
-                        )))
+                        )));
                     }
                     Solc::new(solc)?
                 }
             };
-            return Ok(Some(solc))
+            return Ok(Some(solc));
         }
 
         Ok(None)
@@ -919,7 +924,7 @@ impl Config {
     /// `auto_detect_solc`
     pub fn is_auto_detect(&self) -> bool {
         if self.solc.is_some() {
-            return false
+            return false;
         }
         self.auto_detect_solc
     }
@@ -978,7 +983,7 @@ impl Config {
     pub fn vyper_compiler(&self) -> Result<Option<Vyper>, SolcError> {
         // Only instantiate Vyper if there are any Vyper files in the project.
         if self.project_paths::<VyperLanguage>().input_files_iter().next().is_none() {
-            return Ok(None)
+            return Ok(None);
         }
         let vyper = if let Some(path) = &self.vyper.path {
             Some(Vyper::new(path)?)
@@ -1061,6 +1066,48 @@ impl Config {
         } else {
             Some(Ok(Cow::Borrowed(self.eth_rpc_url.as_deref()?)))
         }
+    }
+
+    pub fn get_ignore_filter(&self) -> Result<SkipBuildFilters, SolcError> {
+        let ignored_paths: Vec<String> = self.get_ignored_paths()?;
+
+        let ignore_pattern: Vec<GlobMatcher> =
+            ignored_paths.iter().filter_map(|path| GlobMatcher::from_str(path).ok()).collect();
+
+        let ignore_filter: SkipBuildFilters =
+            SkipBuildFilters::new(ignore_pattern, self.root.0.clone());
+        Ok(ignore_filter)
+    }
+
+    pub fn get_ignored_paths(&self) -> Result<Vec<String>, SolcError> {
+        let foundryignore_file_path = Path::new(".foundryignore");
+
+        if !foundryignore_file_path.exists() {
+            eprintln!("{}{}", "Warning: ".yellow().bold(), "Can not find .foundryignore".bold());
+            return Ok(Vec::new())
+        }
+
+        let file = File::open(foundryignore_file_path).unwrap();
+        let reader = io::BufReader::new(file);
+        let mut ignored_paths: Vec<String> = Vec::new();
+
+        for line in reader.lines() {
+            let line = line.map_err(|e| SolcError::msg(format!("Failed to read line: {e}")))?;
+            let trimmed = line.trim();
+            if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                ignored_paths.push(trimmed.to_string());
+            }
+        }
+
+        if ignored_paths.is_empty() {
+            eprintln!(
+                "{}{}",
+                "Warning: ".yellow().bold(),
+                "No skipped paths found in .foundryignore".bold()
+            );
+        }
+
+        Ok(ignored_paths)
     }
 
     /// Resolves the given alias to a matching rpc url
@@ -1160,7 +1207,7 @@ impl Config {
     ) -> Result<Option<ResolvedEtherscanConfig>, EtherscanConfigError> {
         if let Some(maybe_alias) = self.etherscan_api_key.as_ref().or(self.eth_rpc_url.as_ref()) {
             if self.etherscan.contains_key(maybe_alias) {
-                return self.etherscan.clone().resolved().remove(maybe_alias).transpose()
+                return self.etherscan.clone().resolved().remove(maybe_alias).transpose();
             }
         }
 
@@ -1174,7 +1221,7 @@ impl Config {
                     // we update the key, because if an etherscan_api_key is set, it should take
                     // precedence over the entry, since this is usually set via env var or CLI args.
                     config.key.clone_from(key);
-                    return Ok(Some(config))
+                    return Ok(Some(config));
                 }
                 (Ok(config), None) => return Ok(Some(config)),
                 (Err(err), None) => return Err(err),
@@ -1187,7 +1234,7 @@ impl Config {
         // etherscan fallback via API key
         if let Some(key) = self.etherscan_api_key.as_ref() {
             let chain = chain.or(self.chain).unwrap_or_default();
-            return Ok(ResolvedEtherscanConfig::create(key, chain))
+            return Ok(ResolvedEtherscanConfig::create(key, chain));
         }
 
         Ok(None)
@@ -1471,7 +1518,7 @@ impl Config {
     {
         let file_path = self.get_config_path();
         if !file_path.exists() {
-            return Ok(())
+            return Ok(());
         }
         let contents = fs::read_to_string(&file_path)?;
         let mut doc = contents.parse::<toml_edit::DocumentMut>()?;
@@ -1633,14 +1680,14 @@ impl Config {
                 return match path.is_file() {
                     true => Some(path.to_path_buf()),
                     false => None,
-                }
+                };
             }
             let cwd = std::env::current_dir().ok()?;
             let mut cwd = cwd.as_path();
             loop {
                 let file_path = cwd.join(path);
                 if file_path.is_file() {
-                    return Some(file_path)
+                    return Some(file_path);
                 }
                 cwd = cwd.parent()?;
             }
@@ -1714,7 +1761,7 @@ impl Config {
         if let Some(cache_dir) = Self::foundry_rpc_cache_dir() {
             let mut cache = Cache { chains: vec![] };
             if !cache_dir.exists() {
-                return Ok(cache)
+                return Ok(cache);
             }
             if let Ok(entries) = cache_dir.as_path().read_dir() {
                 for entry in entries.flatten().filter(|x| x.path().is_dir()) {
@@ -1758,7 +1805,7 @@ impl Config {
     fn get_cached_blocks(chain_path: &Path) -> eyre::Result<Vec<(String, u64)>> {
         let mut blocks = vec![];
         if !chain_path.exists() {
-            return Ok(blocks)
+            return Ok(blocks);
         }
         for block in chain_path.read_dir()?.flatten() {
             let file_type = block.file_type()?;
@@ -1770,7 +1817,7 @@ impl Config {
             {
                 block.path()
             } else {
-                continue
+                continue;
             };
             blocks.push((file_name.to_string_lossy().into_owned(), fs::metadata(filepath)?.len()));
         }
@@ -1780,7 +1827,7 @@ impl Config {
     /// The path provided to this function should point to the etherscan cache for a chain.
     fn get_cached_block_explorer_data(chain_path: &Path) -> eyre::Result<u64> {
         if !chain_path.exists() {
-            return Ok(0)
+            return Ok(0);
         }
 
         fn dir_size_recursive(mut dir: fs::ReadDir) -> eyre::Result<u64> {
@@ -1829,13 +1876,14 @@ impl Config {
             if let Some((_, fallback)) =
                 STANDALONE_FALLBACK_SECTIONS.iter().find(|(key, _)| standalone_key == key)
             {
-                figment = figment.merge(
-                    provider
-                        .fallback(standalone_key, fallback)
-                        .wrap(profile.clone(), standalone_key),
-                );
+                figment = figment.merge(ProviderExt::wrap(
+                    &provider.fallback(standalone_key, fallback),
+                    profile.clone(),
+                    standalone_key,
+                ));
             } else {
-                figment = figment.merge(provider.wrap(profile.clone(), standalone_key));
+                figment =
+                    figment.merge(ProviderExt::wrap(&provider, profile.clone(), standalone_key));
             }
         }
         // merge the profile
@@ -1956,7 +2004,7 @@ pub(crate) mod from_opt_glob {
     {
         let s: Option<String> = Option::deserialize(deserializer)?;
         if let Some(s) = s {
-            return Ok(Some(globset::Glob::new(&s).map_err(serde::de::Error::custom)?))
+            return Ok(Some(globset::Glob::new(&s).map_err(serde::de::Error::custom)?));
         }
         Ok(None)
     }
@@ -2238,7 +2286,7 @@ impl TomlFileProvider {
         if let Some(file) = self.env_val() {
             let path = Path::new(&file);
             if !path.exists() {
-                return true
+                return true;
             }
         }
         false
@@ -2258,7 +2306,7 @@ impl TomlFileProvider {
                     "Config file `{}` set in env var `{}` does not exist",
                     file,
                     self.env_var.unwrap()
-                )))
+                )));
             }
             Toml::file(file)
         } else {
@@ -2302,7 +2350,7 @@ impl<P: Provider> Provider for ForcedSnakeCaseData<P> {
             if Config::STANDALONE_SECTIONS.contains(&profile.as_ref()) {
                 // don't force snake case for keys in standalone sections
                 map.insert(profile, dict);
-                continue
+                continue;
             }
             map.insert(profile, dict.into_iter().map(|(k, v)| (k.to_snake_case(), v)).collect());
         }
@@ -2442,7 +2490,7 @@ impl Provider for DappEnvCompatProvider {
             if val > 1 {
                 return Err(
                     format!("Invalid $DAPP_BUILD_OPTIMIZE value `{val}`, expected 0 or 1").into()
-                )
+                );
             }
             dict.insert("optimizer".to_string(), (val == 1).into());
         }
@@ -2508,7 +2556,7 @@ impl<P: Provider> Provider for RenameProfileProvider<P> {
     fn data(&self) -> Result<Map<Profile, Dict>, Error> {
         let mut data = self.provider.data()?;
         if let Some(data) = data.remove(&self.from) {
-            return Ok(Map::from([(self.to.clone(), data)]))
+            return Ok(Map::from([(self.to.clone(), data)]));
         }
         Ok(Default::default())
     }
@@ -2554,7 +2602,7 @@ impl<P: Provider> Provider for UnwrapProfileProvider<P> {
                 for (profile_str, profile_val) in profiles {
                     let profile = Profile::new(&profile_str);
                     if profile != self.profile {
-                        continue
+                        continue;
                     }
                     match profile_val {
                         Value::Dict(_, dict) => return Ok(profile.collect(dict)),
@@ -2565,7 +2613,7 @@ impl<P: Provider> Provider for UnwrapProfileProvider<P> {
                             ));
                             err.metadata = Some(self.provider.metadata());
                             err.profile = Some(self.profile.clone());
-                            return Err(err)
+                            return Err(err);
                         }
                     }
                 }
@@ -2677,7 +2725,7 @@ impl<P: Provider> Provider for OptionalStrictProfileProvider<P> {
             // provider and can't map the metadata to the error. Therefor we return the root error
             // if this error originated in the provider's data.
             if let Err(root_err) = self.provider.data() {
-                return root_err
+                return root_err;
             }
             err
         })
