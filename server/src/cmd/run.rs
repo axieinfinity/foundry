@@ -78,16 +78,23 @@ pub struct RunArgs {
 }
 
 impl RunArgs {
-    
     pub const fn new(rpc_url: String, tx_hash: String) -> Self {
-        let rpc_opts = RpcOpts {
-            url: Some(rpc_url),
-            flashbots: false,
-            jwt_secret: None,
-        };
+        let rpc_opts = RpcOpts { url: Some(rpc_url), flashbots: false, jwt_secret: None };
         let evm_version = Some(EvmVersion::Istanbul);
 
-        Self {tx_hash: tx_hash, debug: false, trace_printer: false, quick: false, verbose: false, label: Vec::new(),decode_internal: false ,compute_units_per_second: Some(330), rpc:rpc_opts, evm_version: evm_version, no_rate_limit: true }
+        Self {
+            tx_hash,
+            debug: false,
+            trace_printer: false,
+            quick: false,
+            verbose: false,
+            label: Vec::new(),
+            decode_internal: false,
+            compute_units_per_second: Some(330),
+            rpc: rpc_opts,
+            evm_version,
+            no_rate_limit: true,
+        }
     }
     /// Executes the transaction by replaying it
     ///
@@ -103,7 +110,12 @@ impl RunArgs {
         let compute_units_per_second =
             if self.no_rate_limit { Some(u64::MAX) } else { self.compute_units_per_second };
 
-        let provider: alloy_provider::RootProvider<alloy_transport::layers::RetryBackoffService<foundry_common::provider::runtime_transport::RuntimeTransport>, alloy_network::AnyNetwork> = foundry_common::provider::ProviderBuilder::new(
+        let provider: alloy_provider::RootProvider<
+            alloy_transport::layers::RetryBackoffService<
+                foundry_common::provider::runtime_transport::RuntimeTransport,
+            >,
+            alloy_network::AnyNetwork,
+        > = foundry_common::provider::ProviderBuilder::new(
             &config.get_rpc_url_or_localhost_http()?,
         )
         .compute_units_per_second_opt(compute_units_per_second)
@@ -220,7 +232,7 @@ impl RunArgs {
         }
 
         // Execute our transaction
-        let result = {
+        let result: TraceResult = {
             executor.set_trace_printer(self.trace_printer);
 
             configure_tx_env(&mut env, &tx);
@@ -231,9 +243,10 @@ impl RunArgs {
                 TraceResult::try_from(executor.deploy_with_env(env, None))?
             }
         };
-        
-        let trace_str = handle_traces(result, &config, chain, self.label, self.debug, self.decode_internal).await?;
+
+        let trace_str =
+            handle_traces(result, &config, chain, self.label, self.debug, self.decode_internal)
+                .await?;
         Ok(trace_str)
-    
     }
 }

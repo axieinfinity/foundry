@@ -22,10 +22,12 @@ use foundry_evm::{
 };
 use serde_json::Value;
 use std::{
-    collections::{HashMap, HashSet}, fmt::Write, path::{Path, PathBuf}, str::FromStr
+    collections::{HashMap, HashSet},
+    fmt::Write,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 use yansi::Paint;
-
 
 /// Given a `Project`'s output, removes the matching ABI, Bytecode and
 /// Runtime Bytecode of the given contract.
@@ -375,24 +377,23 @@ pub async fn handle_traces(
         .build();
 
     let mut addresses: HashSet<Address> = HashSet::new();
-     // get all addresses that include in the tx
-     for (_, trace) in result.traces.as_deref_mut().unwrap_or_default() {
+    // get all addresses that include in the tx
+    for (_, trace) in result.traces.as_deref_mut().unwrap_or_default() {
         for (address, _) in decoder.trace_addresses(trace) {
             addresses.insert(*address);
         }
     }
+
     // lable ronin addresses
-    let ronin_labels = get_ronin_labels(addresses).await?;
+    let ronin_labels = get_ronin_labels(chain, addresses).await?;
     decoder.labels.extend(ronin_labels);
 
-    
     let mut etherscan_identifier = EtherscanIdentifier::new(config, chain)?;
     if let Some(etherscan_identifier) = &mut etherscan_identifier {
         for (_, trace) in result.traces.as_deref_mut().unwrap_or_default() {
             decoder.identify(trace, etherscan_identifier);
         }
     }
-   
 
     if decode_internal {
         let sources = if let Some(etherscan_identifier) = &etherscan_identifier {
@@ -402,34 +403,20 @@ pub async fn handle_traces(
         };
         decoder.debug_identifier = Some(DebugTraceIdentifier::new(sources));
     }
-    let mut trace_str = String::new();
-    if debug {
-        let sources = if let Some(etherscan_identifier) = etherscan_identifier {
-            etherscan_identifier.get_compiled_contracts().await?
-        } else {
-            Default::default()
-        };
-        let mut debugger = Debugger::builder()
-            .traces(result.traces.expect("missing traces"))
-            .decoder(&decoder)
-            .sources(sources)
-            .build();
-        debugger.try_run()?;
-    } else {
-        trace_str = print_traces(&mut result, &decoder).await?;
-    }
+
+    let trace_str = print_traces(&mut result, &decoder).await?;
 
     Ok(trace_str)
 }
 
 pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) -> Result<String> {
     let traces = result.traces.as_mut().expect("No traces found");
-    let mut trace_str = String::new();
+    let mut trace_str: String = String::new();
     println!("Traces:");
     for (_, arena) in traces {
         decode_trace_arena(arena, decoder).await?;
-        trace_str = render_trace_arena(arena);
-        println!("{}", trace_str);
+        trace_str.push_str("\n");
+        trace_str.push_str(&render_trace_arena(arena));
     }
     println!();
 
@@ -443,19 +430,37 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     Ok(trace_str)
 }
 
-pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Address, String>> {
+pub async fn get_ronin_labels(
+    chain: Option<Chain>,
+    addresses: HashSet<Address>,
+) -> Result<HashMap<Address, String>> {
     let client = reqwest::Client::new();
-    let url = "https://explorer-kintsugi.roninchain.com/v2/2020/address";
+
+    let chain_id = match chain {
+        Some(chain) => {
+            if chain.id() == 2020 || chain.id() == 2021 {
+                chain.id()
+            } else {
+                2020
+            }
+        }
+        None => 2020,
+    };
+
+    let url = format!("https://explorer-kintsugi.roninchain.com/v2/{}/address", chain_id);
 
     let response = client.get(url).send().await?.json::<Value>().await?;
     let mut result: HashMap<Address, String> = HashMap::new();
 
-
     if let Some(items) = response["result"]["items"].as_object() {
         for (address_str, item) in items {
-            if let (address, Some(name)) = (address_str.parse::<Address>().unwrap(), item["name"].as_str()) {
+            if let (address, Some(name)) =
+                (address_str.parse::<Address>().unwrap(), item["name"].as_str())
+            {
                 if addresses.contains(&address) {
                     result.insert(address, format!("<span>{}</span>", name));
+                } else {
+                    result.insert(address, format!("<span>{}</span>", address));
                 }
             }
         }
@@ -463,4 +468,3 @@ pub async fn get_ronin_labels(addresses: HashSet<Address>) -> Result<HashMap<Add
 
     Ok(result)
 }
-

@@ -1,22 +1,16 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-use cmd::run::RunArgs;
-use std::thread;
+pub mod cmd;
+
 use actix_cors::Cors;
-use std::time::Duration;
-mod cmd;
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use cmd::{chain::ChainId, run::RunArgs};
+use std::{thread, time::Duration};
 
-
-async fn run_cast_command(tx: web::Path<String>) -> Result<String, String> {
-    let args = RunArgs::new(
-        "https://api-archived.roninchain.com/rpc".to_string(),
-        tx.as_str().to_string()
-    );
-
+async fn run_cast_command(chain: ChainId, tx: String) -> Result<String, String> {
+    let chain_info = chain.info();
+    let args: RunArgs = RunArgs::new(chain_info.rpc_url.to_string(), tx);
     // Run on another thread
     let handle = thread::spawn(move || {
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async { args.run().await })
+        tokio::runtime::Runtime::new().unwrap().block_on(async { args.run().await })
     });
 
     let trace_str = handle.join().unwrap();
@@ -27,16 +21,21 @@ async fn run_cast_command(tx: web::Path<String>) -> Result<String, String> {
     }
 }
 
-#[get("/run_cast/{tx}")]
-async fn cast_command_handler(tx: web::Path<String>) -> impl Responder {
-    match run_cast_command(tx).await {
-        Ok(output) => {
-            HttpResponse::Ok().content_type("text/plain").body(output)
-        },
+#[get("/run_cast/{chain_id}/{tx}")]
+async fn cast_command_handler(path: web::Path<(u64, String)>) -> impl Responder {
+    let (chain_id, tx) = path.into_inner();
+
+    let chain = match ChainId::from_id(chain_id) {
+        Some(chain) => chain,
+        None => ChainId::RoninMainnet,
+    };
+
+    match run_cast_command(chain, tx).await {
+        Ok(output) => HttpResponse::Ok().content_type("text/plain").body(output),
         Err(e) => {
             println!("Error response: {}", e);
             HttpResponse::InternalServerError().body(format!("Error executing command: {}", e))
-        },
+        }
     }
 }
 
