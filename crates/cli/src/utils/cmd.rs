@@ -425,11 +425,11 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     if result.success {
         let successful_str = "Transaction successfully executed.";
         println!("{}", successful_str.green());
-        trace_str.push_str(successful_str);
+        trace_str.push_str(&format!("<span class='tx-success'>{successful_str}</span>"));
     } else {
         let faild_str = "Transaction failed.";
         println!("{}", faild_str.red());
-        trace_str.push_str(faild_str);
+        trace_str.push_str(&format!("<span class='tx-failed'>{faild_str}</span>"));
     }
 
     let gas_used = format!("\nGas used: {}", result.gas_used);
