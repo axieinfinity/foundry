@@ -413,20 +413,28 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     let traces = result.traces.as_mut().expect("No traces found");
     let mut trace_str: String = String::new();
     println!("Traces:");
+    trace_str.push_str("Traces:\n");
     for (_, arena) in traces {
         decode_trace_arena(arena, decoder).await?;
         trace_str.push_str("\n");
         trace_str.push_str(&render_trace_arena(arena));
     }
+    trace_str.push_str("\n");
     println!();
 
     if result.success {
-        println!("{}", "Transaction successfully executed.".green());
+        let successful_str = "Transaction successfully executed.";
+        println!("{}", successful_str.green());
+        trace_str.push_str(successful_str);
     } else {
-        println!("{}", "Transaction failed.".red());
+        let faild_str = "Transaction failed.";
+        println!("{}", faild_str.red());
+        trace_str.push_str(faild_str);
     }
 
-    println!("Gas used: {}", result.gas_used);
+    let gas_used = format!("\nGas used: {}", result.gas_used);
+    println!("{}", gas_used);
+    trace_str.push_str(&gas_used);
     Ok(trace_str)
 }
 
