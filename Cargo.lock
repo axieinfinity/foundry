@@ -8319,6 +8319,7 @@ dependencies = [
  "foundry-wallets",
  "futures",
  "mini-redis",
+ "once_cell",
  "rand",
  "rayon",
  "serde",

@@ -36,7 +36,7 @@ async fn cast_command_handler(path: web::Path<(u64, String, u64)>) -> impl Respo
     };
 
     match run_cast_command(chain, tx, quick).await {
-        Ok(output) => HttpResponse::Ok().content_type("text/plain").body(output),
+        Ok(output) => HttpResponse::Ok().content_type("text/html").body(output),
         Err(e) => {
             println!("Error response: {}", e);
             HttpResponse::InternalServerError().body(format!("Error executing command: {}", e))
