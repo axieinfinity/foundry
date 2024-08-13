@@ -78,15 +78,15 @@ pub struct RunArgs {
 }
 
 impl RunArgs {
-    pub const fn new(rpc_url: String, tx_hash: String) -> Self {
+    pub const fn new(rpc_url: String, tx_hash: String, quick: bool) -> Self {
         let rpc_opts = RpcOpts { url: Some(rpc_url), flashbots: false, jwt_secret: None };
-        let evm_version = Some(EvmVersion::Istanbul);
+        let evm_version = Some(EvmVersion::London);
 
         Self {
             tx_hash,
             debug: false,
             trace_printer: false,
-            quick: false,
+            quick,
             verbose: false,
             label: Vec::new(),
             decode_internal: false,
