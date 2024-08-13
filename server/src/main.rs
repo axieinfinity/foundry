@@ -26,7 +26,7 @@ async fn run_cast_command(chain: ChainId, tx: String, quick: u64) -> Result<Stri
     }
 }
 
-#[get("/run_cast/{chain_id}/{tx}")]
+#[get("/run_cast/{chain_id}/{tx}/{quick}")]
 async fn cast_command_handler(path: web::Path<(u64, String, u64)>) -> impl Responder {
     let (chain_id, tx, quick) = path.into_inner();
 
