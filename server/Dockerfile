@@ -13,7 +13,7 @@ RUN mkdir -p /build-out
 
 RUN cp target/release/server /build-out/
 
-FROM ghcr.io/axieinfinity/foundry:cast@sha256:6bb3947cb0875b4f2c91e79d34f48135db356b0fa7da329613c01e772c1b6e7c as foundry-client
+FROM ghcr.io/axieinfinity/foundry:cast@sha256:84e6b47f0e9cd9f6f78e6e6d88bffb0f91be555c0dfaa7f27174ffbf03249b0c as foundry-client
 
 # Release stage - Ubuntu Container
 FROM ubuntu:22.04
