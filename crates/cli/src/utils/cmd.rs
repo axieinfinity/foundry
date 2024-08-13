@@ -425,11 +425,11 @@ pub async fn print_traces(result: &mut TraceResult, decoder: &CallTraceDecoder) 
     if result.success {
         let successful_str = "Transaction successfully executed.";
         println!("{}", successful_str.green());
-        trace_str.push_str(&format!("<span class='tx-success'>{successful_str}</span>"));
+        trace_str.push_str(&format!("{successful_str}"));
     } else {
         let faild_str = "Transaction failed.";
         println!("{}", faild_str.red());
-        trace_str.push_str(&format!("<span class='tx-failed'>{faild_str}</span>"));
+        trace_str.push_str(&format!("{faild_str}"));
     }
 
     let gas_used = format!("\nGas used: {}", result.gas_used);
@@ -466,9 +466,9 @@ pub async fn get_ronin_labels(
                 (address_str.parse::<Address>().unwrap(), item["name"].as_str())
             {
                 if addresses.contains(&address) {
-                    result.insert(address, format!("<span>{}</span>", name));
+                    result.insert(address, format!("{}", name));
                 } else {
-                    result.insert(address, format!("<span>{}</span>", address));
+                    result.insert(address, format!("{}", address));
                 }
             }
         }
